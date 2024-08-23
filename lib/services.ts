@@ -4,18 +4,17 @@ export const getWeatherInfo = async (locality_id: string) => {
       `https://www.weatherunion.com/gw/weather/external/v0/get_locality_weather_data?locality_id=${locality_id}`,
       {
         headers: {
-          'X-Zomato-Api-Key': "58fe197bf8a9b07a97008541420ef509" || '', 
+          'X-Zomato-Api-Key': process.env.NEXT_PUBLIC_API_KEY || '', 
         },
       }
     );
 
     if (!response.ok) {
-      throw new Error('Network response was not ok');
+      throw new Error(response.statusText);
     }
 
     
     const data = await response.json();
-    console.log(data);
     return data;
   } catch (error) {
     console.error('Error fetching weather data:', error);
