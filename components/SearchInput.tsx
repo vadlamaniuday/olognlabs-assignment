@@ -1,7 +1,10 @@
 "use client";
 import React, { ChangeEvent, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import weatherData from "../db.json";
-import { getWeatherInfo } from "@/lib/services";
+import { fetchWeatherInfo } from "@/features/weather/weatherSlice";
+import { RootState, AppDispatch } from "@/store";
+import WeatherItem from "@/components/WeatherItem";
 
 interface WeatherInfo {
   cityName: string;
@@ -17,15 +20,16 @@ interface WeatherData {
 }
 
 const SearchInput = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const weatherState = useSelector((state: RootState) => state.weather);
+
   const [input, setInput] = useState<string>("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [localityID, setLocalityID] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setInput(value);
-
     if (value.length > 0) {
       const filteredSuggestions = (weatherData as WeatherData).weatherInfo
         .filter((item) =>
@@ -33,9 +37,7 @@ const SearchInput = () => {
         )
         .map((item) => item.localityName)
         .filter((city, index, self) => self.indexOf(city) === index);
-
       setSuggestions(filteredSuggestions);
-      console.log(suggestions);
     } else {
       setSuggestions([]);
     }
@@ -47,26 +49,21 @@ const SearchInput = () => {
     const selectedLocality = (weatherData as WeatherData).weatherInfo.find(
       (item) => item.localityName === suggestion
     );
-
     if (selectedLocality) {
       setLocalityID(selectedLocality.localityId);
     }
   };
 
-  const handleGetWeatherInfo = async () => {
+  const handleGetWeatherInfo = () => {
     if (localityID) {
-      try {
-        const response = await getWeatherInfo(localityID);
-        setData(response.locality_weather_data);
-      } catch (error) {
-        console.error("Error fetching weather info:", error);
-      }
+      dispatch(fetchWeatherInfo(localityID));
     }
   };
+
   return (
     <div className="flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
-      <div className="text-center">
-        <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold mb-8">
+      <div className="text-center w-full max-w-4xl">
+        <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold mb-8 text-gray-800">
           Weather Search
         </h1>
         <div className="relative max-w-md sm:max-w-xl md:max-w-2xl mx-auto">
@@ -78,7 +75,7 @@ const SearchInput = () => {
             onChange={handleInputChange}
           />
           {suggestions.length > 0 && (
-            <ul className="absolute left-0 right-0 bg-white border mt-2 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+            <ul className="absolute left-0 right-0 bg-white border mt-2 rounded-lg shadow-lg max-h-56 overflow-y-auto z-10">
               {suggestions.map((suggestion, index) => (
                 <li
                   key={index}
@@ -93,23 +90,64 @@ const SearchInput = () => {
         </div>
         <div className="mt-8 space-x-2 sm:space-x-4">
           <button
-            className="px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base bg-gray-100 rounded hover:shadow"
+            className="px-6 py-3 text-sm sm:text-base bg-blue-500 text-white rounded-full hover:bg-blue-600 transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
             onClick={handleGetWeatherInfo}
           >
             Get Weather Info
           </button>
         </div>
-        {data && (
-          <div className="mt-8">
-            <h2 className="text-2xl font-semibold">Weather Information</h2>
-            <ul className="mt-4">
-              <li>Temperature: {data.temperature}°C</li>
-              <li>Humidity: {data.humidity}%</li>
-              <li>Wind Speed: {data.wind_speed} m/s</li>
-              <li>Wind Direction: {data.wind_direction}°</li>
-              <li>Rain Intensity: {data.rain_intensity}</li>
-              <li>Rain Accumulation: {data.rain_accumulation}</li>
-            </ul>
+
+        {weatherState.status === "loading" && (
+          <div className="mt-8 text-gray-600">
+            <p className="text-xl">Loading weather data...</p>
+          </div>
+        )}
+
+        {weatherState.status === "failed" && (
+          <div className="mt-8 text-red-500">
+            <p className="text-xl">Error: {weatherState.error}</p>
+          </div>
+        )}
+
+        {weatherState.status === "succeeded" && weatherState.data && (
+          <div className="mt-12 bg-white shadow-lg rounded-lg overflow-hidden">
+            <div className="bg-blue-500 text-white py-4">
+              <h2 className="text-3xl font-semibold">Weather Information</h2>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <WeatherItem
+                  icon="🌡️"
+                  label="Temperature"
+                  value={`${weatherState.data.temperature}°C`}
+                />
+                <WeatherItem
+                  icon="💧"
+                  label="Humidity"
+                  value={`${weatherState.data.humidity}%`}
+                />
+                <WeatherItem
+                  icon="💨"
+                  label="Wind Speed"
+                  value={`${weatherState.data.wind_speed} m/s`}
+                />
+                <WeatherItem
+                  icon="🧭"
+                  label="Wind Direction"
+                  value={`${weatherState.data.wind_direction}°`}
+                />
+                <WeatherItem
+                  icon="🌧️"
+                  label="Rain Intensity"
+                  value={weatherState.data.rain_intensity}
+                />
+                <WeatherItem
+                  icon="☔"
+                  label="Rain Accumulation"
+                  value={weatherState.data.rain_accumulation}
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>
