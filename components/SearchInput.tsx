@@ -8,7 +8,7 @@ import WeatherItem from "@/components/WeatherItem";
 
 interface WeatherInfo {
   cityName: string;
-  localityName: String;
+  localityName: string;
   localityId: string;
   latitude: number;
   longitude: number;
